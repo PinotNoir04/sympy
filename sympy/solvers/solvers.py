@@ -13,58 +13,56 @@ This module contain solvers for all kinds of equations:
 """
 from __future__ import annotations
 
-from sympy.core import (S, Add, Symbol, Dummy, Expr, Mul)
-from sympy.core.assumptions import check_assumptions
-from sympy.core.exprtools import factor_terms
-from sympy.core.function import (expand_mul, expand_log, Derivative,
-                                 AppliedUndef, UndefinedFunction, nfloat,
-                                 Function, expand_power_exp, _mexpand, expand,
-                                 expand_func)
-from sympy.core.logic import fuzzy_not, fuzzy_and
-from sympy.core.numbers import Float, Rational, _illegal
-from sympy.core.intfunc import integer_log, ilcm
-from sympy.core.power import Pow
-from sympy.core.relational import Eq, Ne
-from sympy.core.sorting import ordered, default_sort_key
-from sympy.core.sympify import sympify, _sympify
-from sympy.core.traversal import preorder_traversal
-from sympy.logic.boolalg import And, BooleanAtom
-
-from sympy.functions import (log, exp, LambertW, cos, sin, tan, acos, asin, atan,
-                             Abs, re, im, arg, sqrt, atan2)
-from sympy.functions.combinatorial.factorials import binomial
-from sympy.functions.elementary.hyperbolic import HyperbolicFunction
-from sympy.functions.elementary.piecewise import piecewise_fold, Piecewise
-from sympy.functions.elementary.trigonometric import TrigonometricFunction
-from sympy.integrals.integrals import Integral
-from sympy.ntheory.factor_ import divisors
-from sympy.simplify import (simplify, collect, powsimp, posify,  # type: ignore
-    powdenest, nsimplify, denom, logcombine, sqrtdenest, fraction,
-    separatevars)
-from sympy.simplify.sqrtdenest import sqrt_depth
-from sympy.simplify.fu import TR1, TR2i, TR10, TR11
-from sympy.strategies.rl import rebuild
-from sympy.matrices.exceptions import NonInvertibleMatrixError
-from sympy.matrices import Matrix, zeros
-from sympy.polys import roots, cancel, factor, Poly
-from sympy.polys.solvers import sympy_eqs_to_ring, solve_lin_sys
-from sympy.polys.polyerrors import GeneratorsNeeded, PolynomialError
-from sympy.polys.polytools import gcd
-from sympy.utilities.lambdify import lambdify
-from sympy.utilities.misc import filldedent, debugf
-from sympy.utilities.iterables import (connected_components,
-    generate_bell, uniq, iterable, is_sequence, subsets, flatten, sift)
-from sympy.utilities.decorator import conserve_mpmath_dps
+import warnings
+from collections import defaultdict
+from itertools import combinations, product
+from types import GeneratorType
 
 from mpmath import findroot
 
+from sympy.core import Add, Dummy, Expr, Mul, S, Symbol
+from sympy.core.assumptions import check_assumptions
+from sympy.core.exprtools import factor_terms
+from sympy.core.function import (
+    AppliedUndef, Derivative, Function, UndefinedFunction, _mexpand, expand,
+    expand_func, expand_log, expand_mul, expand_power_exp, nfloat)
+from sympy.core.intfunc import ilcm, integer_log
+from sympy.core.logic import fuzzy_and, fuzzy_not
+from sympy.core.numbers import Float, Rational, _illegal
+from sympy.core.power import Pow
+from sympy.core.relational import Eq, Ne
+from sympy.core.sorting import default_sort_key, ordered
+from sympy.core.sympify import _sympify, sympify
+from sympy.core.traversal import preorder_traversal
+from sympy.functions import (
+    Abs, LambertW, acos, arg, asin, atan, atan2, cos, exp, im, log, re, sin,
+    sqrt, tan)
+from sympy.functions.combinatorial.factorials import binomial
+from sympy.functions.elementary.hyperbolic import HyperbolicFunction
+from sympy.functions.elementary.piecewise import Piecewise, piecewise_fold
+from sympy.functions.elementary.trigonometric import TrigonometricFunction
+from sympy.integrals.integrals import Integral
+from sympy.logic.boolalg import And, BooleanAtom
+from sympy.matrices import Matrix, zeros
+from sympy.matrices.exceptions import NonInvertibleMatrixError
+from sympy.ntheory.factor_ import divisors
+from sympy.polys import Poly, cancel, factor, roots
+from sympy.polys.polyerrors import GeneratorsNeeded, PolynomialError
+from sympy.polys.polytools import gcd
+from sympy.polys.solvers import solve_lin_sys, sympy_eqs_to_ring
+from sympy.simplify import (  # type: ignore
+    collect, denom, fraction, logcombine, nsimplify, posify, powdenest,
+    powsimp, separatevars, simplify, sqrtdenest)
+from sympy.simplify.fu import TR1, TR10, TR11, TR2i
+from sympy.simplify.sqrtdenest import sqrt_depth
 from sympy.solvers.polysys import solve_poly_system
-
-from types import GeneratorType
-from collections import defaultdict
-from itertools import combinations, product
-
-import warnings
+from sympy.strategies.rl import rebuild
+from sympy.utilities.decorator import conserve_mpmath_dps
+from sympy.utilities.iterables import (
+    connected_components, flatten, generate_bell, is_sequence, iterable, sift,
+    subsets, uniq)
+from sympy.utilities.lambdify import lambdify
+from sympy.utilities.misc import debugf, filldedent
 
 
 def recast_to_symbols(eqs, symbols):
@@ -353,7 +351,7 @@ def checksol(f, symbol, sol=None, **flags):
         if numerical and val.is_number:
             return (abs(val.n(18).n(12, chop=True)) < 1e-9) is S.true
 
-    if flags.get('warn', False):
+    if flags.get('warn', True):
         warnings.warn("\n\tWarning: could not verify solution %s." % sol)
     # returns None if it can't conclude
     # TODO: improve solution testing
@@ -827,7 +825,6 @@ def solve(f, *symbols, **flags):
 
     # checking/recording flags
     ###########################################################################
-
     # set solver types explicitly; as soon as one is False
     # all the rest will be False
     hints = ('cubics', 'quartics', 'quintics')
@@ -3665,4 +3662,4 @@ def unrad(eq, *syms, **flags):
 
 # delayed imports
 from sympy.solvers.bivariate import (
-    bivariate_type, _solve_lambert, _filtered_gens)
+    _filtered_gens, _solve_lambert, bivariate_type)
